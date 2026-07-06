@@ -19,12 +19,12 @@ class DataFrame{
             }
         }
 
-        DataFrame(const std::string& name, std::shared_ptr<Series>& col){
+        DataFrame(const std::string& name,const std::shared_ptr<Series>& col){
             dataframe[name] = col;
             column_names.push_back(name);
         }
 
-        void add_column(const std::string& name, std::shared_ptr<Series>& col) {
+        void add_column(const std::string& name,const std::shared_ptr<Series>& col) {
             dataframe[name] = col;
             column_names.push_back(name);
         }
@@ -35,9 +35,25 @@ class DataFrame{
             throw std::invalid_argument("Column '" + name + "' does not exist.");
         }
 
+
+
         size_t num_columns() const { return dataframe.size(); }; 
+        size_t num_rows() const { return dataframe.size() > 0 ? dataframe.at(column_names[0]) -> size() : 0; }
+        std::pair<int,int> shape() const {return {num_rows(), num_columns()}; }
         const std::vector<std::string>& columns() const { return column_names; }
 
-        
+
+        // Basic utilities for DF
+        DataFrame head(int n = 5) const;
+        DataFrame tail(int n = 5) const;
+        void describe() const;
+
+        // Subset selection
+        DataFrame select(const std::vector<std::string>& columns) const;
+        DataFrame drop(const std::vector<std::string>& columns) const;
+        DataFrame DataFrame::filter(const std::vector<bool>& mask) const;
+
+
+
 
 };
