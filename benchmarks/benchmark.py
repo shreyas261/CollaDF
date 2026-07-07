@@ -10,7 +10,7 @@ def bechmrk(path):
 
     # 1. Time the CSV Reader
     start_read = time.time()
-    df = pd.read_csv("benchmark_data.csv")
+    df = pd.read_csv(path)
     end_read = time.time()
     print(f"Read CSV Time: {end_read - start_read:.4f} seconds")
 
@@ -36,6 +36,8 @@ if __name__ == "__main__":
     print("Starting Pandas Benchmark...")
     start_total = time.time()
     bechmrk("10M.csv")
+    bechmrk("50M.csv")
+    bechmrk("100M.csv")
     end_total = time.time()
     print(f"Total Pandas Time: {end_total - start_total:.4f} seconds")
     

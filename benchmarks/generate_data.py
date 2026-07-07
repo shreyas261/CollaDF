@@ -1,7 +1,7 @@
 import csv
 import random
 
-def generate_csv(filename="benchmark_data.csv", rows=10_000_000_000):
+def generate_csv(filename="50M.csv", rows=50000000):
     departments = ["Engineering", "Sales", "Marketing", "HR", "Finance"]
     
     with open(filename, mode='w', newline='') as file:
