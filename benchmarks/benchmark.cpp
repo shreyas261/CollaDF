@@ -47,10 +47,10 @@ void benchmark(const std::string& loc){
 int main() {
     std::cout << "Starting CollaDF Benchmark..." << std::endl;
     auto start_total = std::chrono::high_resolution_clock::now();
-    auto end_total = std::chrono::high_resolution_clock::now();
     benchmark("10M.csv");
     benchmark("50M.csv");
     benchmark("100M.csv");
+    auto end_total = std::chrono::high_resolution_clock::now();
     std::chrono::duration<double> total_time = end_total - start_total;
     std::cout << "Total CollaDF Time: " << total_time.count() << " seconds\n\n\n";
     return 0;
