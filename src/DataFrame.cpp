@@ -88,11 +88,11 @@ void DataFrame::describe() const {
         
         if (base_series->type() == DataType::INTEGER) {
             auto* int_col = static_cast<Column<int64_t>*>(base_series.get());
-            stats = int_col -> compute_stats();
+            stats = int_col -> get_stats();
         } 
         else if (base_series->type() == DataType::DOUBLE) {
             auto* double_col = static_cast<Column<double>*>(base_series.get());
-            stats = double_col->compute_stats();
+            stats = double_col -> get_stats();
         }
         
         std::cout << "--- " << col_name << " ---\n";
@@ -285,12 +285,6 @@ std::vector<bool> operator!(const std::vector<bool>& a){
 }
 
 
-DataFrame DataFrame::sort_values(const std::vector<std::string>& columns,bool ascending) const{
-    DataFrame result;
-
-
-    return result;
-}
 
 DataFrame DataFrame::sort_values(const std::string& name, bool ascending ) const {
     if (dataframe.find(name) == dataframe.end()) {
@@ -307,6 +301,63 @@ DataFrame DataFrame::sort_values(const std::string& name, bool ascending ) const
         std::shared_ptr<Series> sorted_series = base_series -> reorder(sorted_indices);
         
         result.add_column(name, sorted_series);
+    }
+
+    return result;
+}
+
+DataFrame DataFrame::sort_values(const std::vector<std::string>& columns, bool ascending) const {
+    if (columns.empty() || num_rows() == 0) return *this;
+    using RawDataPtr = std::variant<const std::vector<int64_t>*, const std::vector<double>*, const std::vector<std::string>*>;
+    std::vector<RawDataPtr> raw_columns;
+    raw_columns.reserve(columns.size());
+
+    for (const std::string& name : columns) {
+        auto base_series = this->get_column(name); // Will throw if column doesn't exist
+        
+        if (base_series->type() == DataType::INTEGER) {
+            raw_columns.push_back(&static_cast<const Column<int64_t>*>(base_series.get())->get_column());
+        } 
+        else if (base_series->type() == DataType::DOUBLE) {
+            raw_columns.push_back(&static_cast<const Column<double>*>(base_series.get())->get_column());
+        } 
+        else {
+            raw_columns.push_back(&static_cast<const Column<std::string>*>(base_series.get())->get_column());
+        }
+    }
+    size_t row_count = num_rows();
+    std::vector<size_t> indices(row_count);
+    std::iota(indices.begin(), indices.end(), 0);
+    std::sort(indices.begin(), indices.end(), [&](size_t a, size_t b) {
+        for (const auto& raw_col : raw_columns) {
+            int cmp = 0; 
+            if (std::holds_alternative<const std::vector<int64_t>*>(raw_col)) {
+                const auto* vec = std::get<const std::vector<int64_t>*>(raw_col);
+                if ((*vec)[a] < (*vec)[b]) cmp = -1;
+                else if ((*vec)[a] > (*vec)[b]) cmp = 1;
+            } 
+            else if (std::holds_alternative<const std::vector<double>*>(raw_col)) {
+                const auto* vec = std::get<const std::vector<double>*>(raw_col);
+                if ((*vec)[a] < (*vec)[b]) cmp = -1;
+                else if ((*vec)[a] > (*vec)[b]) cmp = 1;
+            } 
+            else {
+                const auto* vec = std::get<const std::vector<std::string>*>(raw_col);
+                if ((*vec)[a] < (*vec)[b]) cmp = -1;
+                else if ((*vec)[a] > (*vec)[b]) cmp = 1;
+            }
+            if (cmp != 0) {
+                return ascending ? (cmp < 0) : (cmp > 0);
+            }
+        }
+
+        return false; 
+    });
+
+    DataFrame result;
+    for (const std::string& name : column_names) {
+        std::shared_ptr<Series> base_series = this->get_column(name);
+        result.add_column(name, base_series->reorder(indices));
     }
 
     return result;

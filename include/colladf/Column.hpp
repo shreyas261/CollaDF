@@ -70,11 +70,12 @@ class Column : public Series{
         
         Column() = default;
 
-        Column(std::vector<T>& data)  : column(data) {};
-        Column(std::vector<T>&& data) : column(std::move(data)) {}
+        Column(std::vector<T>& data)  : column(data) { this -> stat = compute_stats(); }
+        Column(std::vector<T>&& data) : column(std::move(data)) { this -> stat = compute_stats(); }
 
         size_t size() const override { return column.size(); }
         const std::vector<T>& get_column() const { return column; }
+        ColumnStats get_stats() { return stat; }
 
         DataType type() const override {
             if constexpr (std::is_same_v<T, int64_t>) return DataType::INTEGER;
@@ -92,20 +93,23 @@ class Column : public Series{
                 return stat;
             } 
 
-            double sum = 0.0;
+            else{
+                double sum = 0.0;
 
-            for (const T& val : column) {
-                double d_val = static_cast<double>(val);
+                for (const T& val : column) {
+                    double d_val = static_cast<double>(val);
+                    
+                    if (d_val < stat.min) stat.min = d_val;
+                    if (d_val > stat.max) stat.max = d_val;
+                    sum += d_val;
+                }
                 
-                if (d_val < stat.min) stat.min = d_val;
-                if (d_val > stat.max) stat.max = d_val;
-                sum += d_val;
+                stat.mean = sum / stat.count;
+                return stat;
             }
-            
-            stat.mean = sum / stat.count;
-            return stat;
         }
 
+        
         std::shared_ptr<Series> apply_mask(const std::vector<bool>& mask) const {
             if (mask.size() != column.size()) {
                 throw std::invalid_argument("Mask size must match column size");
