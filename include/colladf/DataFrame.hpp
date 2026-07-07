@@ -1,6 +1,10 @@
 #pragma once
 #include "Column.hpp"
 
+std::vector<bool> operator&(const std::vector<bool>& a,const std::vector<bool>& b);
+std::vector<bool> operator|(const std::vector<bool>& a,const std::vector<bool>& b);
+std::vector<bool> operator!(const std::vector<bool>& a);
+
 
 class DataFrame{
     private:

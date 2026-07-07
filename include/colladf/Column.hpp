@@ -70,7 +70,7 @@ class Column : public Series{
         Column(std::vector<T>&& data) : column(std::move(data)) {}
 
         size_t size() const override { return column.size(); }
-        std::vector<T>& get_column() { return column; }
+        const std::vector<T>& get_column() const { return column; }
 
         DataType type() const override {
             if constexpr (std::is_same_v<T, int64_t>) return DataType::INTEGER;
@@ -102,7 +102,7 @@ class Column : public Series{
             return stat;
         }
 
-        std::shared_ptr<Series> apply_mask(const std::vector<bool>& mask){
+        std::shared_ptr<Series> apply_mask(const std::vector<bool>& mask) const {
             if (mask.size() != column.size()) {
                 throw std::invalid_argument("Mask size must match column size");
             }
@@ -170,6 +170,7 @@ class Column : public Series{
         std::shared_ptr<Series> add(const ScalarValue& v) const override {
             T target = extract(v);
             std::vector<T> result(column.size());
+            
             for (size_t i = 0; i < column.size(); ++i)
                 result[i] = column[i] + target;
             return std::make_shared<Column<T>>(std::move(result));
@@ -177,188 +178,214 @@ class Column : public Series{
 
         std::shared_ptr<Series> subtract(const ScalarValue& v) const override {
             T target = extract(v);
-            std::vector<T> result(column.size());
-            for (size_t i = 0; i < column.size(); ++i)
-                result[i] = column[i] - target;
-            return std::make_shared<Column<T>>(std::move(result));
+            if constexpr (std::is_same_v<T, std::string>) {
+                throw std::invalid_argument("Arithmetic is not supported on string columns");
+            }
+            else{
+                std::vector<T> result(column.size());
+                for (size_t i = 0; i < column.size(); ++i)
+                    result[i] = column[i] - target;
+                return std::make_shared<Column<T>>(std::move(result));
+        
+            }
         }
 
         std::shared_ptr<Series> multiply(const ScalarValue& v) const override {
             T target = extract(v);
-            std::vector<T> result(column.size());
-            for (size_t i = 0; i < column.size(); ++i)
-                result[i] = column[i] * target;
-            return std::make_shared<Column<T>>(std::move(result));
+
+            if constexpr (std::is_same_v<T, std::string>) {
+                throw std::invalid_argument("Arithmetic is not supported on string columns");
+            }
+            else{
+                std::vector<T> result(column.size());
+                for (size_t i = 0; i < column.size(); ++i)
+                    result[i] = column[i] * target;
+                return std::make_shared<Column<T>>(std::move(result));
+            }
         }
 
         std::shared_ptr<Series> divide(const ScalarValue& v) const override {
             T target = extract(v);
-            std::vector<T> result(column.size());
-            for (size_t i = 0; i < column.size(); ++i)
-                result[i] = column[i] / target;
-            return std::make_shared<Column<T>>(std::move(result));
+            
+            if constexpr (std::is_same_v<T, std::string>) {
+                throw std::invalid_argument("Arithmetic is not supported on string columns");
+            }
+            else{
+                std::vector<T> result(column.size());
+                for (size_t i = 0; i < column.size(); ++i)
+                    result[i] = column[i] / target;
+                return std::make_shared<Column<T>>(std::move(result));
+            }
         }
 
 
         std::shared_ptr<Series> add(const Series& other) const override {
-            if (size() != other.size()) {
-                throw std::invalid_argument(
-                    "Column arithmetic requires equal-length columns (no index alignment)"
-                );
-            }
-        
-            bool result_is_double = (type() == DataType::DOUBLE || other.type() == DataType::DOUBLE);
+            if (size() != other.size()) throw std::invalid_argument("Column size mismatch");
 
-            if (result_is_double) {
-                std::vector<double> result(column.size());
-
-                if (other.type() == DataType::DOUBLE) {
-                    const auto& other_col = static_cast<const Column<double>&>(other).get_column();
-                    for (size_t i = 0; i < column.size(); ++i) {
-                        result[i] = static_cast<double>(column[i]) + other_col[i];
-                    }
-                } 
-                else {
-                    const auto& other_col = static_cast<const Column<int64_t>&>(other).get_column();
-                    for (size_t i = 0; i < column.size(); ++i) {
-                        result[i] = static_cast<double>(column[i]) + static_cast<double>(other_col[i]);
-                    }
+            if constexpr (std::is_same_v<T, std::string>) {
+                if (other.type() != DataType::STRING) {
+                    throw std::invalid_argument("Cannot concatenate a string column with a numeric column");
                 }
-                return std::make_shared<Column<double>>(std::move(result));
-            }
+                
+                const auto& other_col = static_cast<const Column<std::string>&>(other).get_column();
+                std::vector<std::string> result(column.size());
+                
+                for (size_t i = 0; i < column.size(); ++i) {
+                    result[i] = column[i] + other_col[i]; // String concatenation
+                }
+                return std::make_shared<Column<std::string>>(std::move(result));
+                
+            } 
+            else {
+                if (other.type() == DataType::STRING) {
+                    throw std::invalid_argument("Cannot add a numeric column to a string column");
+                }
 
-            
-            const auto& other_col = static_cast<const Column<int64_t>&>(other).get_column();
-            std::vector<int64_t> result(column.size());
-            for (size_t i = 0; i < column.size(); ++i) {
-                result[i] = column[i] + other_col[i];
+                if (type() == DataType::DOUBLE || other.type() == DataType::DOUBLE) {
+                    std::vector<double> result(column.size());
+                    
+                    if (other.type() == DataType::DOUBLE) {
+                        const auto& other_col = static_cast<const Column<double>&>(other).get_column();
+                        for (size_t i = 0; i < column.size(); ++i) {
+                            result[i] = static_cast<double>(column[i]) + other_col[i];
+                        }
+                    } else {
+                        const auto& other_col = static_cast<const Column<int64_t>&>(other).get_column();
+                        for (size_t i = 0; i < column.size(); ++i) {
+                            result[i] = static_cast<double>(column[i]) + static_cast<double>(other_col[i]);
+                        }
+                    }
+                    return std::make_shared<Column<double>>(std::move(result));
+                }
+
+                const auto& other_col = static_cast<const Column<int64_t>&>(other).get_column();
+                std::vector<int64_t> result(column.size());
+                for (size_t i = 0; i < column.size(); ++i) {
+                    result[i] = column[i] + other_col[i];
+                }
+                return std::make_shared<Column<int64_t>>(std::move(result));
             }
-            return std::make_shared<Column<int64_t>>(std::move(result));
         }
-
         
         std::shared_ptr<Series> subtract(const Series& other) const override {
-            if (size() != other.size()) {
-                throw std::invalid_argument(
-                    "Column arithmetic requires equal-length columns (no index alignment)"
-                );
-            }
-
-            
-            if (type() == DataType::STRING || other.type() == DataType::STRING) {
+            if constexpr (std::is_same_v<T, std::string>) {
                 throw std::invalid_argument("Arithmetic is not supported on string columns");
             }
-
-        
-            bool result_is_double = (type() == DataType::DOUBLE || other.type() == DataType::DOUBLE);
-
-            if (result_is_double) {
-                std::vector<double> result(column.size());
-
-                if (other.type() == DataType::DOUBLE) {
-                    const auto& other_col = static_cast<const Column<double>&>(other).get_column();
-                    for (size_t i = 0; i < column.size(); ++i) {
-                        result[i] = static_cast<double>(column[i]) - other_col[i];
-                    }
-                } 
-                else {
-                    const auto& other_col = static_cast<const Column<int64_t>&>(other).get_column();
-                    for (size_t i = 0; i < column.size(); ++i) {
-                        result[i] = static_cast<double>(column[i]) - static_cast<double>(other_col[i]);
-                    }
+            else{
+                if (size() != other.size()) {
+                    throw std::invalid_argument(
+                        "Column arithmetic requires equal-length columns (no index alignment)"
+                    );
                 }
-                return std::make_shared<Column<double>>(std::move(result));
-            }
-
             
-            const auto& other_col = static_cast<const Column<int64_t>&>(other).get_column();
-            std::vector<int64_t> result(column.size());
-            for (size_t i = 0; i < column.size(); ++i) {
-                result[i] = column[i] - other_col[i];
+                bool result_is_double = (type() == DataType::DOUBLE || other.type() == DataType::DOUBLE);
+
+                if (result_is_double) {
+                    std::vector<double> result(column.size());
+
+                    if (other.type() == DataType::DOUBLE) {
+                        const auto& other_col = static_cast<const Column<double>&>(other).get_column();
+                        for (size_t i = 0; i < column.size(); ++i) {
+                            result[i] = static_cast<double>(column[i]) - other_col[i];
+                        }
+                    } 
+                    else {
+                        const auto& other_col = static_cast<const Column<int64_t>&>(other).get_column();
+                        for (size_t i = 0; i < column.size(); ++i) {
+                            result[i] = static_cast<double>(column[i]) - static_cast<double>(other_col[i]);
+                        }
+                    }
+                    return std::make_shared<Column<double>>(std::move(result));
+                }
+
+                
+                const auto& other_col = static_cast<const Column<int64_t>&>(other).get_column();
+                std::vector<int64_t> result(column.size());
+                for (size_t i = 0; i < column.size(); ++i) {
+                    result[i] = column[i] - other_col[i];
+                }
+                return std::make_shared<Column<int64_t>>(std::move(result));
             }
-            return std::make_shared<Column<int64_t>>(std::move(result));
         }
 
         std::shared_ptr<Series> divide(const Series& other) const override {
-            if (size() != other.size()) {
-                throw std::invalid_argument(
-                    "Column arithmetic requires equal-length columns (no index alignment)"
-                );
-            }
-
-            
-            if (type() == DataType::STRING || other.type() == DataType::STRING) {
+            if constexpr (std::is_same_v<T, std::string>) {
                 throw std::invalid_argument("Arithmetic is not supported on string columns");
-            }
-
-        
-            bool result_is_double = (type() == DataType::DOUBLE || other.type() == DataType::DOUBLE);
-
-            if (result_is_double) {
-                std::vector<double> result(column.size());
-
-                if (other.type() == DataType::DOUBLE) {
-                    const auto& other_col = static_cast<const Column<double>&>(other).get_column();
-                    for (size_t i = 0; i < column.size(); ++i) {
-                        result[i] = static_cast<double>(column[i]) / other_col[i];
-                    }
-                } 
-                else {
-                    const auto& other_col = static_cast<const Column<int64_t>&>(other).get_column();
-                    for (size_t i = 0; i < column.size(); ++i) {
-                        result[i] = static_cast<double>(column[i]) / static_cast<double>(other_col[i]);
-                    }
+            }    
+            else{
+                if (size() != other.size()) {
+                    throw std::invalid_argument(
+                        "Column arithmetic requires equal-length columns (no index alignment)"
+                    );
                 }
-                return std::make_shared<Column<double>>(std::move(result));
-            }
-
             
-            const auto& other_col = static_cast<const Column<int64_t>&>(other).get_column();
-            std::vector<int64_t> result(column.size());
-            for (size_t i = 0; i < column.size(); ++i) {
-                result[i] = column[i] / other_col[i];
+                bool result_is_double = (type() == DataType::DOUBLE || other.type() == DataType::DOUBLE);
+
+                if (result_is_double) {
+                    std::vector<double> result(column.size());
+
+                    if (other.type() == DataType::DOUBLE) {
+                        const auto& other_col = static_cast<const Column<double>&>(other).get_column();
+                        for (size_t i = 0; i < column.size(); ++i) {
+                            result[i] = static_cast<double>(column[i]) / other_col[i];
+                        }
+                    } 
+                    else {
+                        const auto& other_col = static_cast<const Column<int64_t>&>(other).get_column();
+                        for (size_t i = 0; i < column.size(); ++i) {
+                            result[i] = static_cast<double>(column[i]) / static_cast<double>(other_col[i]);
+                        }
+                    }
+                    return std::make_shared<Column<double>>(std::move(result));
+                }
+
+                
+                const auto& other_col = static_cast<const Column<int64_t>&>(other).get_column();
+                std::vector<int64_t> result(column.size());
+                for (size_t i = 0; i < column.size(); ++i) {
+                    result[i] = column[i] / other_col[i];
+                }
+                return std::make_shared<Column<int64_t>>(std::move(result));
             }
-            return std::make_shared<Column<int64_t>>(std::move(result));
         }
 
         std::shared_ptr<Series> multiply(const Series& other) const override {
-            if (size() != other.size()) {
-                throw std::invalid_argument(
-                    "Column arithmetic requires equal-length columns (no index alignment)"
-                );
-            }
-
-            
-            if (type() == DataType::STRING || other.type() == DataType::STRING) {
+            if constexpr (std::is_same_v<T, std::string>) {
                 throw std::invalid_argument("Arithmetic is not supported on string columns");
-            }
-
-        
-            bool result_is_double = (type() == DataType::DOUBLE || other.type() == DataType::DOUBLE);
-
-            if (result_is_double) {
-                std::vector<double> result(column.size());
-
-                if (other.type() == DataType::DOUBLE) {
-                    const auto& other_col = static_cast<const Column<double>&>(other).get_column();
-                    for (size_t i = 0; i < column.size(); ++i) {
-                        result[i] = static_cast<double>(column[i]) * other_col[i];
-                    }
-                } else {
-                    const auto& other_col = static_cast<const Column<int64_t>&>(other).get_column();
-                    for (size_t i = 0; i < column.size(); ++i) {
-                        result[i] = static_cast<double>(column[i]) * static_cast<double>(other_col[i]);
-                    }
+            }            
+            else{
+                if (size() != other.size()) {
+                    throw std::invalid_argument(
+                        "Column arithmetic requires equal-length columns (no index alignment)"
+                    );
                 }
-                return std::make_shared<Column<double>>(std::move(result));
-            }
-
             
-            const auto& other_col = static_cast<const Column<int64_t>&>(other).get_column();
-            std::vector<int64_t> result(column.size());
-            for (size_t i = 0; i < column.size(); ++i) {
-                result[i] = column[i] * other_col[i];
+                bool result_is_double = (type() == DataType::DOUBLE || other.type() == DataType::DOUBLE);
+
+                if (result_is_double) {
+                    std::vector<double> result(column.size());
+
+                    if (other.type() == DataType::DOUBLE) {
+                        const auto& other_col = static_cast<const Column<double>&>(other).get_column();
+                        for (size_t i = 0; i < column.size(); ++i) {
+                            result[i] = static_cast<double>(column[i]) * other_col[i];
+                        }
+                    } else {
+                        const auto& other_col = static_cast<const Column<int64_t>&>(other).get_column();
+                        for (size_t i = 0; i < column.size(); ++i) {
+                            result[i] = static_cast<double>(column[i]) * static_cast<double>(other_col[i]);
+                        }
+                    }
+                    return std::make_shared<Column<double>>(std::move(result));
+                }
+
+                
+                const auto& other_col = static_cast<const Column<int64_t>&>(other).get_column();
+                std::vector<int64_t> result(column.size());
+                for (size_t i = 0; i < column.size(); ++i) {
+                    result[i] = column[i] * other_col[i];
+                }
+                return std::make_shared<Column<int64_t>>(std::move(result));
             }
-            return std::make_shared<Column<int64_t>>(std::move(result));
         }
 };

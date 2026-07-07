@@ -34,10 +34,12 @@ DataType Reader::infer_type(std::string_view token) {
         char c = token[i];
         if (c == '-') {
             if (i != 0) { is_number = false; break; }
-        } else if (c == '.') {
+        } 
+        else if (c == '.') {
             if (has_dot) { is_number = false; break; }
             has_dot = true;
-        } else if (!std::isdigit(static_cast<unsigned char>(c))) {
+        } 
+        else if (!std::isdigit(static_cast<unsigned char>(c))) {
             is_number = false;
             break;
         }

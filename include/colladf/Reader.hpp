@@ -52,7 +52,7 @@ class MmapFile {
 class Reader{
     private:
         static std::vector<std::string> parse_line(const std::string& line, char delimiter = ',');
-        static std::vector<std::string_view> Reader::ssplit(std::string_view str, char delim = ',');
+        static std::vector<std::string_view> ssplit(std::string_view str, char delim = ',');
         static DataType infer_type(std::string_view ); 
         static DataType promote_type(DataType , DataType );
     public:
