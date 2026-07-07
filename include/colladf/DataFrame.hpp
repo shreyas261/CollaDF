@@ -79,7 +79,24 @@ class DataFrame{
         DataFrame drop(const std::vector<std::string>& columns) const;
         DataFrame filter(const std::vector<bool>& mask) const;
 
+        //Apply a lamda
+        template <typename T, typename Func>
+        std::shared_ptr<Series> apply(const std::string& col_name, Func f) const {
+            
+            std::shared_ptr<Series> base_series = this->get_column(col_name);
 
+            auto* typed_col = dynamic_cast<Column<T>*>(base_series.get());
+            if (!typed_col) {
+                throw std::invalid_argument("Apply Error: Column is not of the specified type T.");
+            }
+            using R = std::invoke_result_t<Func, T>;
+            std::vector<R> new_data;
+            new_data.reserve(typed_col->size());
+            for (const T& val : typed_col->get_column()) {
+                new_data.push_back(f(val));
+            }
+            return std::make_shared<Column<R>>(std::move(new_data));
+        }
 
 
 };
