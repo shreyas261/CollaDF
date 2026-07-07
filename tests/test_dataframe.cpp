@@ -1,207 +1,184 @@
-// test_dataframe.cpp
-// End-to-end smoke test for CollaDF: generates temp.csv, then exercises
-// every DataFrame method currently implemented (read_csv -> head/tail ->
-// describe -> select/drop -> filter). Run with a "-v" arg for verbose
-// column dumps.
-
+#include <gtest/gtest.h>
+#include <fstream>
+#include <algorithm>
 #include "../include/colladf/DataFrame.hpp"
 #include "../include/colladf/Reader.hpp"
-#include <fstream>
-#include <iostream>
-#include <cassert>
-#include <algorithm>
+#include "../include/colladf/GroupBy.hpp"
 
-// ---------------------------------------------------------------------
-// Small helper: DataFrame has no generic "print everything" method yet
-// (only describe(), which skips string columns and only shows stats).
-// This walks every column via the same type()-dispatch pattern the
-// library itself uses in head()/tail(), so you can eyeball the actual
-// row data.
-// ---------------------------------------------------------------------
-void print_dataframe(const DataFrame& df, const std::string& label) {
-    std::cout << "\n=== " << label << "  (shape: "
-              << df.shape().first << " rows x " << df.shape().second << " cols) ===\n";
+// -----------------------------------------------------------------------------
+// Test Fixture: Handles CSV Setup and Teardown
+// -----------------------------------------------------------------------------
+class CollaDFTest : public ::testing::Test {
+protected:
+    const std::string filepath = "gtest_temp.csv";
 
-    const auto& cols = df.columns();
-    for (const auto& name : cols) std::cout << name << "\t";
-    std::cout << "\n";
-
-    size_t rows = df.num_rows();
-    for (size_t r = 0; r < rows; ++r) {
-        for (const auto& name : cols) {
-            auto series = df.get_column(name);
-            switch (series->type()) {
-                case DataType::INTEGER: {
-                    auto* c = static_cast<Column<int64_t>*>(series.get());
-                    std::cout << c->get_column()[r] << "\t";
-                    break;
-                }
-                case DataType::DOUBLE: {
-                    auto* c = static_cast<Column<double>*>(series.get());
-                    std::cout << c->get_column()[r] << "\t";
-                    break;
-                }
-                case DataType::STRING: {
-                    auto* c = static_cast<Column<std::string>*>(series.get());
-                    std::cout << c->get_column()[r] << "\t";
-                    break;
-                }
-            }
-        }
-        std::cout << "\n";
+    void SetUp() override {
+        std::ofstream out(filepath);
+        out << "id,name,department,salary,rating\n";
+        out << "1,Alice,Engineering,72000,4.5\n";
+        out << "2,Bob,Sales,58000,3.8\n";
+        out << "3,Charlie,Engineering,91000,4.9\n";
+        out << "4,Diana,Marketing,64000,4.1\n";
+        out << "5,Eve,Sales,49000,3.2\n";
+        out << "6,Frank,Engineering,105000,4.7\n";
+        out << "7,Grace,Marketing,71000,4.0\n";
+        out << "8,Heidi,Engineering,88000,4.6\n";
+        out.close();
     }
-}
 
-// ---------------------------------------------------------------------
-// Step 0: write a small temp.csv with a mix of int / double / string
-// columns so type inference and every downstream method get exercised.
-// ---------------------------------------------------------------------
-void write_temp_csv(const std::string& path) {
-    std::ofstream out(path);
-    out << "id,name,department,salary,rating\n";
-    out << "1,Alice,Engineering,72000,4.5\n";
-    out << "2,Bob,Sales,58000,3.8\n";
-    out << "3,Charlie,Engineering,91000,4.9\n";
-    out << "4,Diana,Marketing,64000,4.1\n";
-    out << "5,Eve,Sales,49000,3.2\n";
-    out << "6,Frank,Engineering,105000,4.7\n";
-    out << "7,Grace,Marketing,71000,4.0\n";
-    out << "8,Heidi,Engineering,88000,4.6\n";
-    out.close();
-}
+    void TearDown() override {
+        std::remove(filepath.c_str());
+    }
+};
 
-int main(int argc, char** argv) {
-    bool verbose = (argc > 1 && std::string(argv[1]) == "-v");
-    const std::string path = "temp.csv";
-
-    // ---- Reader::read_csv ----
-    write_temp_csv(path);
-    DataFrame df = Reader::read_csv(path);
-    std::cout << "[OK] read_csv loaded " << df.shape().first
-              << " rows, " << df.shape().second << " cols\n";
-    if (verbose) print_dataframe(df, "Full DataFrame");
-
-    // ---- shape / columns ----
+// -----------------------------------------------------------------------------
+// Core IO and Shape Tests
+// -----------------------------------------------------------------------------
+TEST_F(CollaDFTest, ReadCSVAndShape) {
+    DataFrame df = Reader::read_csv(filepath);
+    
     auto [rows, cols] = df.shape();
-    assert(rows == 8 && cols == 5);
-    std::cout << "[OK] shape() = (" << rows << ", " << cols << ")\n";
+    EXPECT_EQ(rows, 8);
+    EXPECT_EQ(cols, 5);
+    
+    const auto& col_names = df.columns();
+    EXPECT_EQ(col_names[0], "id");
+    EXPECT_EQ(col_names[2], "department");
+}
 
-    std::cout << "[OK] columns(): ";
-    for (const auto& c : df.columns()) std::cout << c << " ";
-    std::cout << "\n";
-
-    // ---- head / tail ----
+// -----------------------------------------------------------------------------
+// Subsetting Tests
+// -----------------------------------------------------------------------------
+TEST_F(CollaDFTest, HeadAndTail) {
+    DataFrame df = Reader::read_csv(filepath);
+    
     DataFrame h = df.head(3);
-    assert(h.num_rows() == 3);
-    if (verbose) print_dataframe(h, "head(3)");
-    std::cout << "[OK] head(3) -> " << h.num_rows() << " rows\n";
-
+    EXPECT_EQ(h.num_rows(), 3);
+    
     DataFrame t = df.tail(2);
-    assert(t.num_rows() == 2);
-    if (verbose) print_dataframe(t, "tail(2)");
-    std::cout << "[OK] tail(2) -> " << t.num_rows() << " rows\n";
+    EXPECT_EQ(t.num_rows(), 2);
+    
+    // Boundary check: requesting more rows than exist
+    DataFrame h_large = df.head(100);
+    EXPECT_EQ(h_large.num_rows(), 8);
+}
 
-    // ---- describe ----
-    std::cout << "\n[describe()] (numeric columns only)\n";
-    df.describe();
+TEST_F(CollaDFTest, SelectAndDrop) {
+    DataFrame df = Reader::read_csv(filepath);
+    
+    DataFrame selected = df.select({"name", "rating"});
+    EXPECT_EQ(selected.num_columns(), 2);
+    
+    DataFrame dropped = df.drop({"salary", "department"});
+    EXPECT_EQ(dropped.num_columns(), 3);
+}
 
-    // ---- select ----
-    DataFrame sel = df.select({"name", "salary"});
-    assert(sel.num_columns() == 2);
-    if (verbose) print_dataframe(sel, "select({name, salary})");
-    std::cout << "[OK] select({name, salary}) -> " << sel.num_columns() << " cols\n";
+// -----------------------------------------------------------------------------
+// Filtering and Masking Tests
+// -----------------------------------------------------------------------------
+TEST_F(CollaDFTest, BooleanFiltering) {
+    DataFrame df = Reader::read_csv(filepath);
+    
+    // Engineering has 4 rows
+    std::vector<bool> eng_mask = df["department"] == "Engineering";
+    DataFrame eng_df = df[eng_mask];
+    EXPECT_EQ(eng_df.num_rows(), 4);
 
-    // ---- drop ----
-    DataFrame dropped = df.drop({"rating"});
-    assert(dropped.num_columns() == 4);
-    if (verbose) print_dataframe(dropped, "drop({rating})");
-    std::cout << "[OK] drop({rating}) -> " << dropped.num_columns() << " cols\n";
+    // High Earners (>80k) has 3 rows (Charlie, Frank, Heidi)
+    std::vector<bool> salary_mask = df["salary"] > 80000;
+    DataFrame rich_df = df[salary_mask];
+    EXPECT_EQ(rich_df.num_rows(), 3);
 
-    // ---- filter / operator[](vector<bool>) ----
-    // ColumnRef / df.col(name) > value isn't wired up yet, so build the
-    // mask manually the same way filter() expects: one bool per row.
-    // (Column<T>::operator> exists but compares "other > data", i.e. it's
-    // reversed from what the name suggests -- worth fixing before relying
-    // on it. Building the mask by hand here sidesteps that for now.)
-    //
-    // IMPORTANT: always check series->type() before static_cast-ing to a
-    // Column<T>*. "salary" here has no decimal points in the CSV, so the
-    // reader infers INTEGER, not DOUBLE -- casting to the wrong Column<T>
-    // silently reads garbage memory instead of failing loudly.
-    auto salary_series = df.get_column("salary");
-    std::vector<bool> high_earners(salary_series->size());
+    // Combinator Test: Engineering AND > 80k
+    std::vector<bool> combined_mask = eng_mask & salary_mask;
+    DataFrame eng_rich_df = df[combined_mask];
+    EXPECT_EQ(eng_rich_df.num_rows(), 3);
+}
 
-    if (salary_series->type() == DataType::DOUBLE) {
-        auto* col = static_cast<Column<double>*>(salary_series.get());
-        const auto& vals = col->get_column();
-        for (size_t i = 0; i < vals.size(); ++i) high_earners[i] = vals[i] > 70000.0;
-    } else if (salary_series->type() == DataType::INTEGER) {
-        auto* col = static_cast<Column<int64_t>*>(salary_series.get());
-        const auto& vals = col->get_column();
-        for (size_t i = 0; i < vals.size(); ++i) high_earners[i] = vals[i] > 70000;
-    } else {
-        throw std::runtime_error("salary column is not numeric");
-    }
+// -----------------------------------------------------------------------------
+// Arithmetic Tests
+// -----------------------------------------------------------------------------
+TEST_F(CollaDFTest, ScalarArithmetic) {
+    DataFrame df = Reader::read_csv(filepath);
+    
+    DataFrame boosted = df["salary"] + 5000;
+    
+    auto base_series = boosted.get_column("salary");
+    auto* typed_col = static_cast<Column<int64_t>*>(base_series.get());
+    const auto& vec = typed_col->get_column();
+    
+    // Alice's new salary: 72000 + 5000
+    EXPECT_EQ(vec[0], 77000); 
+}
 
-    DataFrame filtered = df.filter(high_earners);
-    if (verbose) print_dataframe(filtered, "filter(salary > 70000)");
-    std::cout << "[OK] filter(salary > 70000) -> " << filtered.num_rows() << " rows\n";
+// -----------------------------------------------------------------------------
+// GroupBy & Aggregation Tests
+// -----------------------------------------------------------------------------
+TEST_F(CollaDFTest, GroupBySingleColumnMean) {
+    DataFrame df = Reader::read_csv(filepath);
+    DataFrame result = df.groupby("department").mean("salary");
+    
+    EXPECT_EQ(result.num_columns(), 2); // department, salary_mean
+    EXPECT_EQ(result.num_rows(), 3);    // Engineering, Sales, Marketing
 
-    DataFrame filtered2 = df[high_earners]; // operator[](vector<bool>)
-    assert(filtered2.num_rows() == filtered.num_rows());
-    std::cout << "[OK] operator[](mask) matches filter() -> "
-              << filtered2.num_rows() << " rows\n";
+    auto dept_col = static_cast<Column<std::string>*>(result.get_column("department").get())->get_column();
+    auto mean_col = static_cast<Column<double>*>(result.get_column("salary_mean").get())->get_column();
 
-    // ---- operator[](string) : single-column DataFrame (via implicit
-    // ColumnRef -> DataFrame conversion) ----
-    DataFrame name_col = df["name"];
-    assert(name_col.num_columns() == 1);
-    if (verbose) print_dataframe(name_col, "df[\"name\"]");
-    std::cout << "[OK] df[\"name\"] -> " << name_col.num_columns() << " col\n";
+    // Verify Engineering Mean: (72k + 91k + 105k + 88k) / 4 = 89000
+    auto eng_it = std::find(dept_col.begin(), dept_col.end(), "Engineering");
+    ASSERT_NE(eng_it, dept_col.end());
+    size_t eng_idx = std::distance(dept_col.begin(), eng_it);
+    EXPECT_DOUBLE_EQ(mean_col[eng_idx], 89000.0);
 
-    // ---- pandas-style comparison: df["col"] > value, bare literals ----
-    std::vector<bool> mask_pandas_style = df["salary"] > 70000;
-    assert(mask_pandas_style == high_earners);
-    std::cout << "[OK] df[\"salary\"] > 70000 matches manual mask ("
-              << std::count(mask_pandas_style.begin(), mask_pandas_style.end(), true)
-              << " rows)\n";
+    // Verify Sales Mean: (58k + 49k) / 2 = 53500
+    auto sales_it = std::find(dept_col.begin(), dept_col.end(), "Sales");
+    ASSERT_NE(sales_it, dept_col.end());
+    size_t sales_idx = std::distance(dept_col.begin(), sales_it);
+    EXPECT_DOUBLE_EQ(mean_col[sales_idx], 53500.0);
+}
 
-    DataFrame filtered_pandas_style = df[ df["salary"] > 70000 ];
-    assert(filtered_pandas_style.num_rows() == filtered.num_rows());
-    if (verbose) print_dataframe(filtered_pandas_style, "df[df[\"salary\"] > 70000]");
-    std::cout << "[OK] df[df[\"salary\"] > 70000] -> "
-              << filtered_pandas_style.num_rows() << " rows\n";
+TEST_F(CollaDFTest, GroupByMultiColumnMax) {
+    DataFrame df = Reader::read_csv(filepath);
+    
+    // Grouping by department and name. Since names are unique here, 
+    // we should get 8 groups back, each matching the original rows.
+    DataFrame result = df.groupby(std::vector<std::string>{"department", "name"}).max("rating");
+    
+    EXPECT_EQ(result.num_columns(), 3); // department, name, rating_max
+    EXPECT_EQ(result.num_rows(), 8);
+}
 
-    // ---- string-column comparison, bare string literal ----
-    std::vector<bool> is_engineering = df["department"] == "Engineering";
-    DataFrame eng = df[is_engineering];
-    if (verbose) print_dataframe(eng, "department == Engineering");
-    std::cout << "[OK] department == Engineering -> " << eng.num_rows() << " rows\n";
+TEST_F(CollaDFTest, GroupByCount) {
+    DataFrame df = Reader::read_csv(filepath);
+    DataFrame result = df.groupby("department").count("id");
+    
+    auto dept_col = static_cast<Column<std::string>*>(result.get_column("department").get())->get_column();
+    auto count_col = static_cast<Column<int64_t>*>(result.get_column("id_count").get())->get_column();
 
-    // ---- boolean mask combinators: & | ! ----
-    std::vector<bool> combined_and = (df["salary"] > 70000) & is_engineering;
-    DataFrame eng_high_earners = df[combined_and];
-    if (verbose) print_dataframe(eng_high_earners, "salary>70000 & department==Engineering");
-    std::cout << "[OK] (salary > 70000) & (dept == Engineering) -> "
-              << eng_high_earners.num_rows() << " rows\n";
+    auto eng_it = std::find(dept_col.begin(), dept_col.end(), "Engineering");
+    ASSERT_NE(eng_it, dept_col.end());
+    size_t eng_idx = std::distance(dept_col.begin(), eng_it);
+    
+    EXPECT_EQ(count_col[eng_idx], 4); // 4 Engineers
+}
 
-    std::vector<bool> combined_or = (df["salary"] > 100000) | is_engineering;
-    DataFrame eng_or_top_earners = df[combined_or];
-    if (verbose) print_dataframe(eng_or_top_earners, "salary>100000 | department==Engineering");
-    std::cout << "[OK] (salary > 100000) | (dept == Engineering) -> "
-              << eng_or_top_earners.num_rows() << " rows\n";
+// -----------------------------------------------------------------------------
+// Exception Handling Tests
+// -----------------------------------------------------------------------------
+TEST_F(CollaDFTest, ErrorHandling) {
+    DataFrame df = Reader::read_csv(filepath);
+    
+    // Attempting arithmetic on string columns should throw
+    EXPECT_THROW(df["name"] + 10, std::invalid_argument);
+    
+    // Attempting mean on a string column should throw
+    EXPECT_THROW(df.groupby("department").mean("name"), std::invalid_argument);
+    
+    // Fetching a non-existent column should throw
+    EXPECT_THROW(df.get_column("does_not_exist"), std::invalid_argument);
+}
 
-    std::vector<bool> negated = !is_engineering;
-    DataFrame not_eng = df[negated];
-    if (verbose) print_dataframe(not_eng, "!(department == Engineering)");
-    std::cout << "[OK] !(department == Engineering) -> " << not_eng.num_rows() << " rows\n";
-
-    // ---- double comparison, bare literal ----
-    std::vector<bool> high_rating = df["rating"] > 4.5;
-    DataFrame top_rated = df[high_rating];
-    if (verbose) print_dataframe(top_rated, "rating > 4.5");
-    std::cout << "[OK] rating > 4.5 -> " << top_rated.num_rows() << " rows\n";
-
-    std::cout << "\nAll checks passed.\n";
-    return 0;
+int main(int argc, char **argv) {
+    ::testing::InitGoogleTest(&argc, argv);
+    return RUN_ALL_TESTS();
 }

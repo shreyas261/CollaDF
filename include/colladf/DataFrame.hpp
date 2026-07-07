@@ -1,6 +1,8 @@
 #pragma once
 #include "Column.hpp"
 
+class GroupBy;
+
 std::vector<bool> operator&(const std::vector<bool>& a,const std::vector<bool>& b);
 std::vector<bool> operator|(const std::vector<bool>& a,const std::vector<bool>& b);
 std::vector<bool> operator!(const std::vector<bool>& a);
@@ -103,5 +105,9 @@ class DataFrame{
         //Sorting
         DataFrame sort_values(const std::vector<std::string>& columns,bool ascending = true) const;
         DataFrame sort_values(const std::string& name,bool ascending = true) const;
+
+        //Aggregations
+        GroupBy groupby(const std::string& col) const;
+        GroupBy groupby(const std::vector<std::string>& cols) const;
 
 };

@@ -1,5 +1,5 @@
 #include "../include/colladf/DataFrame.hpp"
-
+#include "../include/colladf/GroupBy.hpp"
 
 DataFrame DataFrame::head(int n) const{
     size_t limit = std::min(n, (int)this->num_rows());
@@ -361,4 +361,12 @@ DataFrame DataFrame::sort_values(const std::vector<std::string>& columns, bool a
     }
 
     return result;
+}
+
+GroupBy DataFrame::groupby(const std::string& col) const{
+    return GroupBy(*this,col);
+}
+        
+GroupBy DataFrame::groupby(const std::vector<std::string>& cols) const {
+    return GroupBy(*this,cols);
 }
