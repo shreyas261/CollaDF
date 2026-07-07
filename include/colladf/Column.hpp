@@ -9,6 +9,8 @@
 #include <algorithm>
 #include <unordered_set>
 #include <variant>
+#include <numeric>
+
 
 enum class DataType {
     INTEGER,
@@ -31,6 +33,8 @@ class Series{
         virtual size_t size() const = 0; 
         virtual DataType type() const = 0; 
         virtual std::shared_ptr<Series> apply_mask(const std::vector<bool>& mask) const = 0;
+        virtual std::vector<size_t> argsort(bool ascending = true) const = 0;
+        virtual std::shared_ptr<Series> reorder(const std::vector<size_t>& indices) const = 0;
 
         virtual std::vector<bool> compare_gt(const ScalarValue& v) const = 0;
         virtual std::vector<bool> compare_lt(const ScalarValue& v) const = 0;
@@ -388,4 +392,38 @@ class Column : public Series{
                 return std::make_shared<Column<int64_t>>(std::move(result));
             }
         }
+
+    std::vector<size_t> argsort(bool ascending = true) const override {
+        std::vector<size_t> indices(column.size());
+        
+        std::iota(indices.begin(), indices.end(), 0);
+        if (ascending) {
+            std::sort(indices.begin(), indices.end(),[this](size_t a, size_t b) { 
+                return column[a] < column[b]; 
+            });
+        } 
+        else {
+            std::sort(indices.begin(), indices.end(),[this](size_t a, size_t b) { 
+                return column[a] > column[b]; 
+            });
+        }
+
+        return indices;
+    }
+        
+    std::shared_ptr<Series> reorder(const std::vector<size_t>& indices) const override {
+        if (indices.size() != column.size()) {
+            throw std::invalid_argument("Index array size must match column size");
+        }
+
+        std::vector<T> reordered_data;
+        reordered_data.reserve(column.size());
+
+
+        for (size_t idx : indices) {
+            reordered_data.push_back(column[idx]);
+        }
+
+        return std::make_shared<Column<T>>(std::move(reordered_data));
+    }
 };

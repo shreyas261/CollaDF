@@ -170,3 +170,77 @@ DataFrame Reader::read_csv(const std::string& filepath) {
 
     return df;
 }
+
+void Reader::to_csv(const DataFrame& df, const std::string& filepath) {
+    std::ofstream out(filepath, std::ios::binary);
+    if (!out.is_open()) throw std::runtime_error("Could not open file for writing: " + filepath);
+
+    size_t num_rows = df.num_rows();
+    size_t num_cols = df.num_columns();
+    if (num_rows == 0 || num_cols == 0) return;
+
+    const auto& headers = df.columns();
+
+
+    std::string buffer;
+    buffer.reserve(1024 * 1024); 
+
+    for (size_t i = 0; i < num_cols; ++i) {
+        buffer += headers[i];
+        if (i < num_cols - 1) buffer += ",";
+    }
+    buffer += "\n";
+
+  
+
+    using RawDataPtr = std::variant<const std::vector<int64_t>*, const std::vector<double>*, const std::vector<std::string>*>;
+    std::vector<RawDataPtr> raw_columns(num_cols);
+
+    for (size_t i = 0; i < num_cols; ++i) {
+        auto base_series = df.get_column(headers[i]);
+        if (base_series->type() == DataType::INTEGER) {
+            raw_columns[i] = &static_cast<const Column<int64_t>*>(base_series.get())->get_column();
+        } 
+        else if (base_series->type() == DataType::DOUBLE) {
+            raw_columns[i] = &static_cast<const Column<double>*>(base_series.get())->get_column();
+        } 
+        else {
+            raw_columns[i] = &static_cast<const Column<std::string>*>(base_series.get())->get_column();
+        }
+    }
+
+    char num_buf[64]; 
+
+    for (size_t r = 0; r < num_rows; ++r) {
+        
+        for (size_t c = 0; c < num_cols; ++c) {
+            
+            if (std::holds_alternative<const std::vector<int64_t>*>(raw_columns[c])) {
+                int64_t val = (*std::get<const std::vector<int64_t>*>(raw_columns[c]))[r];
+                auto [ptr, ec] = std::to_chars(num_buf, num_buf + sizeof(num_buf), val);
+                buffer.append(num_buf, ptr - num_buf);
+            } 
+            else if (std::holds_alternative<const std::vector<double>*>(raw_columns[c])) {
+                double val = (*std::get<const std::vector<double>*>(raw_columns[c]))[r];
+                auto [ptr, ec] = std::to_chars(num_buf, num_buf + sizeof(num_buf), val, std::chars_format::general);
+                buffer.append(num_buf, ptr - num_buf);
+            } 
+            else {
+                buffer += (*std::get<const std::vector<std::string>*>(raw_columns[c]))[r];
+            }
+
+            if (c < num_cols - 1) buffer += ",";
+        }
+        buffer += "\n";
+        if (buffer.size() >= 1024 * 1024) {
+            out.write(buffer.data(), buffer.size());
+            buffer.clear();
+        }
+    }
+
+    if (!buffer.empty()) {
+        out.write(buffer.data(), buffer.size());
+    }
+
+    out.close();
+}

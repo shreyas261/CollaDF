@@ -39,6 +39,8 @@ class DataFrame{
             throw std::invalid_argument("Column '" + name + "' does not exist.");
         }
 
+        // void to_csv(const std::string& filepath) const { Reader::to_csv(*this,filepath); } 
+
         DataFrame operator[](const std::vector<bool>& mask);
         DataFrame operator[](const std::string& name);
 
@@ -98,5 +100,8 @@ class DataFrame{
             return std::make_shared<Column<R>>(std::move(new_data));
         }
 
+        //Sorting
+        DataFrame sort_values(const std::vector<std::string>& columns,bool ascending = true) const;
+        DataFrame sort_values(const std::string& name,bool ascending = true) const;
 
 };

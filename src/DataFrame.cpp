@@ -285,4 +285,29 @@ std::vector<bool> operator!(const std::vector<bool>& a){
 }
 
 
+DataFrame DataFrame::sort_values(const std::vector<std::string>& columns,bool ascending) const{
+    DataFrame result;
 
+
+    return result;
+}
+
+DataFrame DataFrame::sort_values(const std::string& name, bool ascending ) const {
+    if (dataframe.find(name) == dataframe.end()) {
+        throw std::invalid_argument("Column to sort by does not exist: " + name);
+    }
+
+    std::shared_ptr<Series> target_col = this -> get_column(name);
+    std::vector<size_t> sorted_indices = target_col -> argsort(ascending);
+
+    DataFrame result;
+
+    for (const std::string& name : column_names) {
+        std::shared_ptr<Series> base_series = this -> get_column(name);
+        std::shared_ptr<Series> sorted_series = base_series -> reorder(sorted_indices);
+        
+        result.add_column(name, sorted_series);
+    }
+
+    return result;
+}
