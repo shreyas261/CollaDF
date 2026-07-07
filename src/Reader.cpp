@@ -26,25 +26,28 @@ std::vector<std::string_view> Reader::ssplit(std::string_view str, char delim){
 
 DataType Reader::infer_type(std::string_view token) {
     if (token.empty()) return DataType::STRING;
-    
+
     bool has_dot = false;
     bool is_number = true;
-    
-    for (char c : token) {
-        if(c == '.'){
-            if(has_dot){ 
-                is_number = false; 
-                break; 
-            }
+
+    for (size_t i = 0; i < token.size(); ++i) {
+        char c = token[i];
+        if (c == '-') {
+            if (i != 0) { is_number = false; break; }
+        } else if (c == '.') {
+            if (has_dot) { is_number = false; break; }
             has_dot = true;
-        } 
-        else if(!std::isdigit(c) && c != '-') {
+        } else if (!std::isdigit(static_cast<unsigned char>(c))) {
             is_number = false;
             break;
         }
     }
-    
-    if(is_number) {
+
+    if (is_number && (token == "-" || token == "." || token == "-.")) {
+        is_number = false;
+    }
+
+    if (is_number) {
         return has_dot ? DataType::DOUBLE : DataType::INTEGER;
     }
     return DataType::STRING;

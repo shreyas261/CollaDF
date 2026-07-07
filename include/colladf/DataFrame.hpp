@@ -35,6 +35,28 @@ class DataFrame{
             throw std::invalid_argument("Column '" + name + "' does not exist.");
         }
 
+        DataFrame operator[](const std::vector<bool>& mask);
+        DataFrame operator[](const std::string& name);
+
+        DataFrame operator+(const ScalarValue& v) const; 
+        DataFrame operator-(const ScalarValue& v) const; 
+        DataFrame operator*(const ScalarValue& v) const;
+        DataFrame operator/(const ScalarValue& v) const;
+
+        std::vector<bool> operator>(const ScalarValue& v) const;
+        std::vector<bool> operator<(const ScalarValue& v) const;
+        std::vector<bool> operator==(const ScalarValue& v) const;
+        std::vector<bool> operator>=(const ScalarValue& v) const; 
+        std::vector<bool> operator<=(const ScalarValue& v) const;
+        std::vector<bool> operator!=(const ScalarValue& v) const;
+
+
+        DataFrame operator+(const DataFrame& other) const; 
+        DataFrame operator-(const DataFrame& other) const; 
+        DataFrame operator*(const DataFrame& other) const; 
+        DataFrame operator/(const DataFrame& other) const; 
+
+
 
 
         size_t num_columns() const { return dataframe.size(); }; 
@@ -51,7 +73,7 @@ class DataFrame{
         // Subset selection
         DataFrame select(const std::vector<std::string>& columns) const;
         DataFrame drop(const std::vector<std::string>& columns) const;
-        DataFrame DataFrame::filter(const std::vector<bool>& mask) const;
+        DataFrame filter(const std::vector<bool>& mask) const;
 
 
 

@@ -1,7 +1,7 @@
 #include "../include/colladf/DataFrame.hpp"
 
 
-DataFrame DataFrame::head(int n = 5) const{
+DataFrame DataFrame::head(int n) const{
     size_t limit = std::min(n, (int)this->num_rows());
     DataFrame result;
 
@@ -39,7 +39,7 @@ DataFrame DataFrame::head(int n = 5) const{
     return result;
 }
 
-DataFrame DataFrame::tail(int n = 5) const{
+DataFrame DataFrame::tail(int n) const{
     size_t limit = std::min(n, (int)this->num_rows());
     DataFrame result;
 
@@ -139,3 +139,150 @@ DataFrame DataFrame::filter(const std::vector<bool>& mask) const {
     
     return result;
 }
+
+DataFrame DataFrame::operator[](const std::vector<bool>& mask){
+    return filter(mask);
+}
+
+DataFrame DataFrame::operator[](const std::string& name){
+    DataFrame result;
+    result.add_column(name,this-> get_column(name));
+    return result;
+}
+
+std::vector<bool> DataFrame::operator>(const ScalarValue& v) const {
+    if (column_names.size() != 1)
+        throw std::runtime_error("Comparison operators require a single-column DataFrame (use df[\"col\"] first)");
+    return get_column(column_names[0])->compare_gt(v);
+}
+
+std::vector<bool> DataFrame::operator<(const ScalarValue& v) const {
+    if (column_names.size() != 1)
+        throw std::runtime_error("Comparison operators require a single-column DataFrame");
+    return get_column(column_names[0])->compare_lt(v);
+}
+
+std::vector<bool> DataFrame::operator==(const ScalarValue& v) const {
+    if (column_names.size() != 1)
+        throw std::runtime_error("Comparison operators require a single-column DataFrame");
+    return get_column(column_names[0])->compare_eq(v);
+}
+
+std::vector<bool> DataFrame::operator>=(const ScalarValue& v) const {
+    if (column_names.size() != 1)
+        throw std::runtime_error("Comparison operators require a single-column DataFrame");
+    return get_column(column_names[0]) -> compare_ge(v);
+}
+
+std::vector<bool> DataFrame::operator<=(const ScalarValue& v) const {
+    if (column_names.size() != 1)
+        throw std::runtime_error("Comparison operators require a single-column DataFrame");
+    return get_column(column_names[0])->compare_le(v);
+}
+
+std::vector<bool> DataFrame::operator!=(const ScalarValue& v) const {
+    if (column_names.size() != 1)
+        throw std::runtime_error("Comparison operators require a single-column DataFrame");
+    return get_column(column_names[0])->compare_ne(v);
+}
+
+DataFrame DataFrame::operator+(const ScalarValue& v) const {
+    if (column_names.size() != 1) throw std::runtime_error("Cannot Broadcast into multiple rows");
+    DataFrame result;
+    result.add_column(column_names[0], get_column(column_names[0])->add(v));
+    return result;
+}
+
+DataFrame DataFrame::operator-(const ScalarValue& v) const {
+    if (column_names.size() != 1) throw std::runtime_error("Cannot Broadcast into multiple rows");
+    DataFrame result;
+    result.add_column(column_names[0], get_column(column_names[0])->subtract(v));
+    return result;
+}
+
+DataFrame DataFrame::operator*(const ScalarValue& v) const {
+    if (column_names.size() != 1) throw std::runtime_error("Cannot Broadcast into multiple rows");
+    DataFrame result;
+    result.add_column(column_names[0], get_column(column_names[0])->multiply(v));
+    return result;
+}
+
+DataFrame DataFrame::operator/(const ScalarValue& v) const {
+    if (column_names.size() != 1) throw std::runtime_error("Cannot Broadcast into multiple rows");
+    DataFrame result;
+    result.add_column(column_names[0], get_column(column_names[0])->divide(v));
+    return result;
+}
+
+
+
+DataFrame DataFrame::operator+(const DataFrame& other) const {
+    if (column_names.size() != 1 || other.column_names.size() != 1)
+        throw std::runtime_error("Arithmetic requires single-column DataFrames");
+
+    auto this_series  = get_column(column_names[0]);
+    auto other_series = other.get_column(other.column_names[0]);
+
+    DataFrame result;
+    result.add_column(column_names[0], this_series->add(*other_series));
+    return result;
+}
+
+DataFrame DataFrame::operator-(const DataFrame& other) const {
+    if (column_names.size() != 1 || other.column_names.size() != 1)
+        throw std::runtime_error("Arithmetic requires single-column DataFrames");
+
+    auto this_series  = get_column(column_names[0]);
+    auto other_series = other.get_column(other.column_names[0]);
+
+    DataFrame result;
+    result.add_column(column_names[0], this_series->subtract(*other_series));
+    return result;
+}
+
+DataFrame DataFrame::operator*(const DataFrame& other) const {
+    if (column_names.size() != 1 || other.column_names.size() != 1)
+        throw std::runtime_error("Arithmetic requires single-column DataFrames");
+
+    auto this_series  = get_column(column_names[0]);
+    auto other_series = other.get_column(other.column_names[0]);
+
+    DataFrame result;
+    result.add_column(column_names[0], this_series->multiply(*other_series));
+    return result;
+}
+
+DataFrame DataFrame::operator/(const DataFrame& other) const {
+    if (column_names.size() != 1 || other.column_names.size() != 1)
+        throw std::runtime_error("Arithmetic requires single-column DataFrames");
+
+    auto this_series  = get_column(column_names[0]);
+    auto other_series = other.get_column(other.column_names[0]);
+
+    DataFrame result;
+    result.add_column(column_names[0], this_series->divide(*other_series));
+    return result;
+}
+
+std::vector<bool> operator&(const std::vector<bool>& a, const std::vector<bool>& b){
+    if (a.size() != b.size()) throw std::invalid_argument("Mask size mismatch");
+    std::vector<bool> result(a.size());
+    for (size_t i = 0; i < a.size(); ++i) result[i] = a[i] && b[i];
+    return result;
+}
+
+std::vector<bool> operator|(const std::vector<bool>& a, const std::vector<bool>& b){
+    if (a.size() != b.size()) throw std::invalid_argument("Mask size mismatch");
+    std::vector<bool> result(a.size());
+    for (size_t i = 0; i < a.size(); ++i) result[i] = a[i] || b[i];
+    return result;
+}
+
+std::vector<bool> operator!(const std::vector<bool>& a){
+    std::vector<bool> result(a.size());
+    for (size_t i = 0; i < a.size(); ++i) result[i] = !a[i];
+    return result;
+}
+
+
+
