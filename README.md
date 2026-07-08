@@ -41,7 +41,7 @@ You can download the generated **`.csv`** files from this [drive](https://drive.
 | | GroupBy Mean | 3.63 s | **4.54 s** | Pandas is ~1.2x faster |
 | | **Total Time** | **22.65 s** | 42.27 s | **CollaDF is ~50% faster overall** |
 
-*Note: The C++ is binded into python colla_df library using Pybind you can find setup.py file as well as pybind_wrapper.py containing the bnding code as well as cmake.*
+*Note: The C++ is binded into python colla_df library using Pybind you can find setup.cpp file as well as pybind_wrapper.py containing the bnding code as well as cmake.*
 
 ---
 
