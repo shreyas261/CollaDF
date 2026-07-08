@@ -14,7 +14,10 @@ This project was built to demonstrate proficiency in core C++ concepts, memory m
 
 ## ⚡ Performance Benchmarks
 
-CollaDF was benchmarked against Python's `pandas` on three large CSV datasets (10 Million, 50 Million, and 100 Million rows). 
+CollaDF was benchmarked against Python's `pandas` on three large CSV datasets (10 Million, 50 Million, and 100 Million rows). The dataset was generated using a python script ('generate_data.py').
+You can download the generated **'.csv** files from this [drive]("https://drive.google.com/drive/u/3/folders/1peQ5oF7KYHM9peqFqEsUpNimK9fwIO5W") link.
+
+
 
 **Key Takeaway:** CollaDF is **~2.3x faster at reading CSV files** due to custom Memory-Mapped I/O (`mmap`) and zero-copy string views, resulting in an overall faster pipeline execution time (33% faster total time on 100M rows).
 
