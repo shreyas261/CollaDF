@@ -26,22 +26,22 @@ You can download the generated **`.csv`** files from this [drive](https://drive.
 
 | Dataset Size | Operation | CollaDF (C++) | Pandas (Python) | Speedup / Note |
 | :--- | :--- | :--- | :--- | :--- |
-| **10M Rows** | Read CSV | **1.62 s** | 2.91 s | CollaDF is ~1.8x faster |
-| | Filter (`>`) | 0.62 s | **0.27 s** | Pandas is ~2.3x faster |
-| | GroupBy Mean | **0.37 s** | 0.38 s | Equal performance |
-| | **Total Time** | **2.62 s** | 3.56 s | **CollaDF is ~36% faster overall** |
+| **10M Rows** | Read CSV | **1.65 s** | 2.91 s | CollaDF is ~1.8x faster |
+| | Filter (`>`) | 0.36 s | **0.27 s** | Pandas is ~2.3x faster |
+| | GroupBy Mean | **0.31 s** | 0.38 s | Equal performance |
+| | **Total Time** | **2.33 s** | 3.56 s | **CollaDF is ~36% faster overall** |
 | | | | | |
 | **50M Rows** | Read CSV | **7.48 s** | 14.12 s | CollaDF is ~1.9x faster |
-| | Filter (`>`) | 2.77 s | **1.32 s** | Pandas is ~2.1x faster |
-| | GroupBy Mean | 1.93 s | **1.73 s** | Pandas is ~1.1x faster |
-| | **Total Time** | **12.19 s** | 17.18 s | **CollaDF is ~41% faster overall** |
+| | Filter (`>`) | 1.78 s | **1.32 s** | Pandas is ~2.1x faster |
+| | GroupBy Mean | 1.71 s | **1.73 s** | Pandas is ~1.1x faster |
+| | **Total Time** | **10.97 s** | 17.18 s | **CollaDF is ~41% faster overall** |
 | | | | | |
-| **100M Rows**| Read CSV | **14.86 s** | 35.05 s | CollaDF is ~2.3x faster |
-| | Filter (`>`) | 7.70 s | **2.67 s** | Pandas is ~2.8x faster |
-| | GroupBy Mean | 5.67 s | **4.54 s** | Pandas is ~1.2x faster |
-| | **Total Time** | **28.24 s** | 42.27 s | **CollaDF is ~50% faster overall** |
+| **100M Rows**| Read CSV | **15.01 s** | 35.05 s | CollaDF is ~2.3x faster |
+| | Filter (`>`) | 4.00 s | **2.67 s** | Pandas is ~2.8x faster |
+| | GroupBy Mean | 3.63 s | **4.54 s** | Pandas is ~1.2x faster |
+| | **Total Time** | **22.65 s** | 42.27 s | **CollaDF is ~50% faster overall** |
 
-*Note: The Python library relies on highly optimized C-extensions and SIMD instructions for filtering. However, CollaDF's massive I/O advantage makes the end-to-end data pipeline significantly faster.*
+*Note: The C++ is binded into python colla_df library using Pybind you can find setup.py file as well as pybind_wrapper.py containing the bnding code as well as cmake.*
 
 ---
 
@@ -122,6 +122,8 @@ make
 # Run the benchmark suite
 ./benchmark_colladf
 ```
+
+
 
 ## Build using python
 
