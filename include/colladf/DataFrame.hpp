@@ -35,7 +35,7 @@ class DataFrame{
             column_names.push_back(name);
         }
 
-        std::shared_ptr<Series> get_column(const std::string& name) const {
+        const std::shared_ptr<Series>& get_column(const std::string& name) const {
             auto itr = dataframe.find(name);
             if(itr != dataframe.end()) return itr -> second;
             throw std::invalid_argument("Column '" + name + "' does not exist.");

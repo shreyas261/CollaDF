@@ -197,7 +197,7 @@ void Reader::to_csv(const DataFrame& df, const std::string& filepath) {
     std::vector<RawDataPtr> raw_columns(num_cols);
 
     for (size_t i = 0; i < num_cols; ++i) {
-        auto base_series = df.get_column(headers[i]);
+        const auto& base_series = df.get_column(headers[i]);
         if (base_series->type() == DataType::INTEGER) {
             raw_columns[i] = &static_cast<const Column<int64_t>*>(base_series.get())->get_column();
         } 

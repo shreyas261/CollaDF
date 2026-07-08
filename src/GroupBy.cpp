@@ -11,7 +11,7 @@ void GroupBy::group() {
     raw_cols.reserve(num_group_cols);
     
     for (const std::string& col_name : names) {
-        auto base_series = df_ref.get_column(col_name);
+        const auto& base_series = df_ref.get_column(col_name);
         auto* typed_col = static_cast<Column<std::string>*>(base_series.get());
         raw_cols.emplace_back(&(typed_col->get_column()));
     }
@@ -25,7 +25,7 @@ void GroupBy::group() {
     }
 }
 DataFrame GroupBy::mean(const std::string& target_col_name) const {
-    auto base_series = df_ref.get_column(target_col_name);
+    const auto& base_series = df_ref.get_column(target_col_name);
     DataType target_type = base_series->type();
 
     if (target_type == DataType::STRING) {
@@ -69,7 +69,7 @@ DataFrame GroupBy::mean(const std::string& target_col_name) const {
 }
 
 DataFrame GroupBy::sum(const std::string& target_col_name) const {
-    auto base_series = df_ref.get_column(target_col_name);
+    const auto& base_series = df_ref.get_column(target_col_name);
     DataType target_type = base_series->type();
 
     if (target_type == DataType::STRING) {
@@ -113,7 +113,7 @@ DataFrame GroupBy::sum(const std::string& target_col_name) const {
 }
 
 DataFrame GroupBy::min(const std::string& target_col_name) const {
-    auto base_series = df_ref.get_column(target_col_name);
+    const auto& base_series = df_ref.get_column(target_col_name);
     DataType target_type = base_series->type();
 
     if (target_type == DataType::STRING) {
@@ -157,7 +157,7 @@ DataFrame GroupBy::min(const std::string& target_col_name) const {
 }
 
 DataFrame GroupBy::max(const std::string& target_col_name) const {
-    auto base_series = df_ref.get_column(target_col_name);
+    const auto& base_series = df_ref.get_column(target_col_name);
     DataType target_type = base_series->type();
 
     if (target_type == DataType::STRING) {

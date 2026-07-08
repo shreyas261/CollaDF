@@ -123,6 +123,14 @@ make
 ./benchmark_colladf
 ```
 
+## Build using python
+
+Run command using python
+```python
+python setup.py build_ext --inplace
+```
+This will create a colla_df.so file for you you can import colla_df as cdf to use it  
+
 ---
 ### Console Outputs
 ![CollaDF Benchmark](images/colladf.png)

@@ -313,7 +313,7 @@ DataFrame DataFrame::sort_values(const std::vector<std::string>& columns, bool a
     raw_columns.reserve(columns.size());
 
     for (const std::string& name : columns) {
-        auto base_series = this->get_column(name); // Will throw if column doesn't exist
+        const auto& base_series = this->get_column(name); // Will throw if column doesn't exist
         
         if (base_series->type() == DataType::INTEGER) {
             raw_columns.push_back(&static_cast<const Column<int64_t>*>(base_series.get())->get_column());
