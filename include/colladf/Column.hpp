@@ -10,6 +10,7 @@
 #include <unordered_set>
 #include <variant>
 #include <numeric>
+#include <cstdint>
 
 
 enum class DataType {
@@ -32,16 +33,16 @@ class Series{
         virtual ~Series() = default;
         virtual size_t size() const = 0; 
         virtual DataType type() const = 0; 
-        virtual std::shared_ptr<Series> apply_mask(const std::vector<bool>& mask) const = 0;
+        virtual std::shared_ptr<Series> apply_mask(const std::vector<uint8_t> & mask) const = 0;
         virtual std::vector<size_t> argsort(bool ascending = true) const = 0;
         virtual std::shared_ptr<Series> reorder(const std::vector<size_t>& indices) const = 0;
 
-        virtual std::vector<bool> compare_gt(const ScalarValue& v) const = 0;
-        virtual std::vector<bool> compare_lt(const ScalarValue& v) const = 0;
-        virtual std::vector<bool> compare_eq(const ScalarValue& v) const = 0;
-        virtual std::vector<bool> compare_ge(const ScalarValue& v) const = 0;
-        virtual std::vector<bool> compare_le(const ScalarValue& v) const = 0;
-        virtual std::vector<bool> compare_ne(const ScalarValue& v) const = 0;
+        virtual std::vector<uint8_t>  compare_gt(const ScalarValue& v) const = 0;
+        virtual std::vector<uint8_t>  compare_lt(const ScalarValue& v) const = 0;
+        virtual std::vector<uint8_t>  compare_eq(const ScalarValue& v) const = 0;
+        virtual std::vector<uint8_t>  compare_ge(const ScalarValue& v) const = 0;
+        virtual std::vector<uint8_t>  compare_le(const ScalarValue& v) const = 0;
+        virtual std::vector<uint8_t>  compare_ne(const ScalarValue& v) const = 0;
 
         virtual std::shared_ptr<Series> add(const ScalarValue& v) const = 0;
         virtual std::shared_ptr<Series> subtract(const ScalarValue& v) const = 0;
@@ -110,12 +111,13 @@ class Column : public Series{
         }
 
         
-        std::shared_ptr<Series> apply_mask(const std::vector<bool>& mask) const {
+        std::shared_ptr<Series> apply_mask(const std::vector<uint8_t> & mask) const {
             if (mask.size() != column.size()) {
                 throw std::invalid_argument("Mask size must match column size");
             }
-
+            size_t true_count = std::count(mask.begin(), mask.end(), true);
             std::vector<T> result; 
+            result.reserve(true_count);
 
             for (size_t i = 0; i < column.size(); ++i) {
                 if (mask[i]) {
@@ -126,49 +128,49 @@ class Column : public Series{
             return std::make_shared<Column<T>>(std::move(result));
         }
 
-        std::vector<bool> compare_gt(const ScalarValue& v) const override {
+        std::vector<uint8_t>  compare_gt(const ScalarValue& v) const override {
             T target = extract(v);
-            std::vector<bool> result(column.size());
+            std::vector<uint8_t>  result(column.size());
             for (size_t i = 0; i < column.size(); ++i)
                 result[i] = column[i] > target;
             return result;
         }
 
-        std::vector<bool> compare_lt(const ScalarValue& v) const override {
+        std::vector<uint8_t>  compare_lt(const ScalarValue& v) const override {
             T target = extract(v);
-            std::vector<bool> result(column.size());
+            std::vector<uint8_t>  result(column.size());
             for (size_t i = 0; i < column.size(); ++i)
                 result[i] = column[i] < target;
             return result;
         }
 
-        std::vector<bool> compare_eq(const ScalarValue& v) const override {
+        std::vector<uint8_t>  compare_eq(const ScalarValue& v) const override {
             T target = extract(v);
-            std::vector<bool> result(column.size());
+            std::vector<uint8_t>  result(column.size());
             for (size_t i = 0; i < column.size(); ++i)
                 result[i] = column[i] == target;
             return result;
         }
 
-        std::vector<bool> compare_ne(const ScalarValue& v) const override {
+        std::vector<uint8_t>  compare_ne(const ScalarValue& v) const override {
             T target = extract(v);
-            std::vector<bool> result(column.size());
+            std::vector<uint8_t>  result(column.size());
             for (size_t i = 0; i < column.size(); ++i)
                 result[i] = column[i] != target;
             return result;
         }
 
-        std::vector<bool> compare_le(const ScalarValue& v) const override {
+        std::vector<uint8_t>  compare_le(const ScalarValue& v) const override {
             T target = extract(v);
-            std::vector<bool> result(column.size());
+            std::vector<uint8_t>  result(column.size());
             for (size_t i = 0; i < column.size(); ++i)
                 result[i] = column[i] <= target;
             return result;
         }
 
-        std::vector<bool> compare_ge(const ScalarValue& v) const override {
+        std::vector<uint8_t>  compare_ge(const ScalarValue& v) const override {
             T target = extract(v);
-            std::vector<bool> result(column.size());
+            std::vector<uint8_t>  result(column.size());
             for (size_t i = 0; i < column.size(); ++i)
                 result[i] = column[i] >= target;
             return result;

@@ -124,7 +124,7 @@ DataFrame DataFrame::drop(const std::vector<std::string>& columns) const {
     return result;
 }
 
-DataFrame DataFrame::filter(const std::vector<bool>& mask) const {
+DataFrame DataFrame::filter(const std::vector<uint8_t> & mask) const {
     if (mask.size() != num_rows()) {
         throw std::invalid_argument("Mask size must match DataFrame row count.");
     }
@@ -140,7 +140,7 @@ DataFrame DataFrame::filter(const std::vector<bool>& mask) const {
     return result;
 }
 
-DataFrame DataFrame::operator[](const std::vector<bool>& mask){
+DataFrame DataFrame::operator[](const std::vector<uint8_t> & mask){
     return filter(mask);
 }
 
@@ -150,37 +150,37 @@ DataFrame DataFrame::operator[](const std::string& name){
     return result;
 }
 
-std::vector<bool> DataFrame::operator>(const ScalarValue& v) const {
+std::vector<uint8_t>  DataFrame::operator>(const ScalarValue& v) const {
     if (column_names.size() != 1)
         throw std::runtime_error("Comparison operators require a single-column DataFrame (use df[\"col\"] first)");
     return get_column(column_names[0])->compare_gt(v);
 }
 
-std::vector<bool> DataFrame::operator<(const ScalarValue& v) const {
+std::vector<uint8_t>  DataFrame::operator<(const ScalarValue& v) const {
     if (column_names.size() != 1)
         throw std::runtime_error("Comparison operators require a single-column DataFrame");
     return get_column(column_names[0])->compare_lt(v);
 }
 
-std::vector<bool> DataFrame::operator==(const ScalarValue& v) const {
+std::vector<uint8_t>  DataFrame::operator==(const ScalarValue& v) const {
     if (column_names.size() != 1)
         throw std::runtime_error("Comparison operators require a single-column DataFrame");
     return get_column(column_names[0])->compare_eq(v);
 }
 
-std::vector<bool> DataFrame::operator>=(const ScalarValue& v) const {
+std::vector<uint8_t>  DataFrame::operator>=(const ScalarValue& v) const {
     if (column_names.size() != 1)
         throw std::runtime_error("Comparison operators require a single-column DataFrame");
     return get_column(column_names[0]) -> compare_ge(v);
 }
 
-std::vector<bool> DataFrame::operator<=(const ScalarValue& v) const {
+std::vector<uint8_t>  DataFrame::operator<=(const ScalarValue& v) const {
     if (column_names.size() != 1)
         throw std::runtime_error("Comparison operators require a single-column DataFrame");
     return get_column(column_names[0])->compare_le(v);
 }
 
-std::vector<bool> DataFrame::operator!=(const ScalarValue& v) const {
+std::vector<uint8_t>  DataFrame::operator!=(const ScalarValue& v) const {
     if (column_names.size() != 1)
         throw std::runtime_error("Comparison operators require a single-column DataFrame");
     return get_column(column_names[0])->compare_ne(v);
@@ -264,22 +264,22 @@ DataFrame DataFrame::operator/(const DataFrame& other) const {
     return result;
 }
 
-std::vector<bool> operator&(const std::vector<bool>& a, const std::vector<bool>& b){
+std::vector<uint8_t>  operator&(const std::vector<uint8_t> & a, const std::vector<uint8_t> & b){
     if (a.size() != b.size()) throw std::invalid_argument("Mask size mismatch");
-    std::vector<bool> result(a.size());
+    std::vector<uint8_t>  result(a.size());
     for (size_t i = 0; i < a.size(); ++i) result[i] = a[i] && b[i];
     return result;
 }
 
-std::vector<bool> operator|(const std::vector<bool>& a, const std::vector<bool>& b){
+std::vector<uint8_t>  operator|(const std::vector<uint8_t> & a, const std::vector<uint8_t> & b){
     if (a.size() != b.size()) throw std::invalid_argument("Mask size mismatch");
-    std::vector<bool> result(a.size());
+    std::vector<uint8_t>  result(a.size());
     for (size_t i = 0; i < a.size(); ++i) result[i] = a[i] || b[i];
     return result;
 }
 
-std::vector<bool> operator!(const std::vector<bool>& a){
-    std::vector<bool> result(a.size());
+std::vector<uint8_t>  operator!(const std::vector<uint8_t> & a){
+    std::vector<uint8_t>  result(a.size());
     for (size_t i = 0; i < a.size(); ++i) result[i] = !a[i];
     return result;
 }

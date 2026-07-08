@@ -3,10 +3,10 @@
 #include <limits>
 
 struct VectorHash {
-    size_t operator()(const std::vector<std::string>& vec) const {
+    size_t operator()(const std::vector<std::string_view>& vec) const {
         size_t seed = 0;
-        for (const std::string& str : vec) {
-            size_t current_hash = std::hash<std::string>{}(str);
+        for (const auto& str : vec) {
+            size_t current_hash = std::hash<std::string_view>{}(str);
             seed ^= current_hash + 0x9e3779b9 + (seed << 6) + (seed >> 2);
         }
         return seed;
@@ -17,7 +17,7 @@ class GroupBy {
     private:
         const DataFrame& df_ref; 
         std::vector<std::string> names; 
-        std::unordered_map<std::vector<std::string>, std::vector<size_t>, VectorHash> groups;
+        std::unordered_map<std::vector<std::string_view>, std::vector<size_t>, VectorHash> groups;
         void group();
 
     public:

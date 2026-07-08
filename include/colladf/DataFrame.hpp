@@ -3,9 +3,9 @@
 
 class GroupBy;
 
-std::vector<bool> operator&(const std::vector<bool>& a,const std::vector<bool>& b);
-std::vector<bool> operator|(const std::vector<bool>& a,const std::vector<bool>& b);
-std::vector<bool> operator!(const std::vector<bool>& a);
+std::vector<uint8_t>  operator&(const std::vector<uint8_t> & a,const std::vector<uint8_t> & b);
+std::vector<uint8_t>  operator|(const std::vector<uint8_t> & a,const std::vector<uint8_t> & b);
+std::vector<uint8_t>  operator!(const std::vector<uint8_t> & a);
 
 
 class DataFrame{
@@ -43,7 +43,7 @@ class DataFrame{
 
         // void to_csv(const std::string& filepath) const { Reader::to_csv(*this,filepath); } 
 
-        DataFrame operator[](const std::vector<bool>& mask);
+        DataFrame operator[](const std::vector<uint8_t> & mask);
         DataFrame operator[](const std::string& name);
 
         DataFrame operator+(const ScalarValue& v) const; 
@@ -51,12 +51,12 @@ class DataFrame{
         DataFrame operator*(const ScalarValue& v) const;
         DataFrame operator/(const ScalarValue& v) const;
 
-        std::vector<bool> operator>(const ScalarValue& v) const;
-        std::vector<bool> operator<(const ScalarValue& v) const;
-        std::vector<bool> operator==(const ScalarValue& v) const;
-        std::vector<bool> operator>=(const ScalarValue& v) const; 
-        std::vector<bool> operator<=(const ScalarValue& v) const;
-        std::vector<bool> operator!=(const ScalarValue& v) const;
+        std::vector<uint8_t>  operator>(const ScalarValue& v) const;
+        std::vector<uint8_t>  operator<(const ScalarValue& v) const;
+        std::vector<uint8_t>  operator==(const ScalarValue& v) const;
+        std::vector<uint8_t>  operator>=(const ScalarValue& v) const; 
+        std::vector<uint8_t>  operator<=(const ScalarValue& v) const;
+        std::vector<uint8_t>  operator!=(const ScalarValue& v) const;
 
 
         DataFrame operator+(const DataFrame& other) const; 
@@ -81,7 +81,7 @@ class DataFrame{
         // Subset selection
         DataFrame select(const std::vector<std::string>& columns) const;
         DataFrame drop(const std::vector<std::string>& columns) const;
-        DataFrame filter(const std::vector<bool>& mask) const;
+        DataFrame filter(const std::vector<uint8_t> & mask) const;
 
         //Apply a lamda
         template <typename T, typename Func>

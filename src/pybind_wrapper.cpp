@@ -1,16 +1,16 @@
 #include <pybind11/pybind11.h>
 #include <pybind11/stl.h>
 #include <pybind11/operators.h>
+#include <cstdint> // <--- Added for uint8_t
 #include "../include/colladf/DataFrame.hpp"
 #include "../include/colladf/Reader.hpp"
 #include "../include/colladf/GroupBy.hpp"
 
 namespace py = pybind11;
 
-// Wrapper to prevent PyBind11 from converting std::vector<bool> to a slow Python list.
-// This keeps the millions of booleans in fast C++ memory.
+// Using uint8_t to avoid the std::vector<bool> bit-packing bottleneck
 struct BoolMask {
-    std::vector<bool> mask;
+    std::vector<uint8_t> mask;
 };
 
 PYBIND11_MODULE(colladf_py, m) {
@@ -18,10 +18,11 @@ PYBIND11_MODULE(colladf_py, m) {
 
     // Bind the Mask Object and bitwise operators (&, |, ~)
     py::class_<BoolMask>(m, "BoolMask")
-        .def(py::init<std::vector<bool>>())
-        .def("__and__", [](const BoolMask& a, const BoolMask& b) { return BoolMask{a.mask & b.mask}; })
-        .def("__or__", [](const BoolMask& a, const BoolMask& b) { return BoolMask{a.mask | b.mask}; })
-        .def("__invert__", [](const BoolMask& a) { return BoolMask{!a.mask}; });
+        .def(py::init<std::vector<uint8_t>>())
+        // Explicitly calling the global operators defined in DataFrame.hpp
+        .def("__and__", [](const BoolMask& a, const BoolMask& b) { return BoolMask{operator&(a.mask, b.mask)}; })
+        .def("__or__", [](const BoolMask& a, const BoolMask& b) { return BoolMask{operator|(a.mask, b.mask)}; })
+        .def("__invert__", [](const BoolMask& a) { return BoolMask{operator!(a.mask)}; });
 
     // Bind GroupBy
     py::class_<GroupBy>(m, "GroupBy")

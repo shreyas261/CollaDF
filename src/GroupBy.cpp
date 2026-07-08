@@ -12,24 +12,18 @@ void GroupBy::group() {
     
     for (const std::string& col_name : names) {
         auto base_series = df_ref.get_column(col_name);
-        
-        if (base_series->type() != DataType::STRING) {
-            throw std::invalid_argument("CollaDF MVP: GroupBy currently only supports STRING columns.");
-        }
-        
         auto* typed_col = static_cast<Column<std::string>*>(base_series.get());
-        raw_cols.push_back(&(typed_col->get_column()));
+        raw_cols.emplace_back(&(typed_col->get_column()));
     }
     
-    std::vector<std::string> current_key(num_group_cols);
+    std::vector<std::string_view> current_key(num_group_cols);
     for (size_t r = 0; r < row_count; ++r) {
         for (size_t c = 0; c < num_group_cols; ++c) {
-            current_key[c] = (*raw_cols[c])[r];
+            current_key[c] = (*raw_cols[c])[r]; 
         }
-        groups[current_key].push_back(r);
+        groups[current_key].emplace_back(r);
     }
 }
-
 DataFrame GroupBy::mean(const std::string& target_col_name) const {
     auto base_series = df_ref.get_column(target_col_name);
     DataType target_type = base_series->type();
@@ -60,9 +54,9 @@ DataFrame GroupBy::mean(const std::string& target_col_name) const {
         }
 
         for (size_t c = 0; c < names.size(); ++c) {
-            output_key_cols[c].push_back(key_vec[c]);
+            output_key_cols[c].emplace_back(key_vec[c]);
         }
-        output_means.push_back(sum / row_indices.size());
+        output_means.emplace_back(sum / row_indices.size());
     }
 
     DataFrame result;
@@ -104,9 +98,9 @@ DataFrame GroupBy::sum(const std::string& target_col_name) const {
         }
 
         for (size_t c = 0; c < names.size(); ++c) {
-            output_key_cols[c].push_back(key_vec[c]);
+            output_key_cols[c].emplace_back(key_vec[c]);
         }
-        output_sums.push_back(sum);
+        output_sums.emplace_back(sum);
     }
 
     DataFrame result;
@@ -148,9 +142,9 @@ DataFrame GroupBy::min(const std::string& target_col_name) const {
         }
 
         for (size_t c = 0; c < names.size(); ++c) {
-            output_key_cols[c].push_back(key_vec[c]);
+            output_key_cols[c].emplace_back(key_vec[c]);
         }
-        output_mins.push_back(min_val);
+        output_mins.emplace_back(min_val);
     }
 
     DataFrame result;
@@ -192,9 +186,9 @@ DataFrame GroupBy::max(const std::string& target_col_name) const {
         }
 
         for (size_t c = 0; c < names.size(); ++c) {
-            output_key_cols[c].push_back(key_vec[c]);
+            output_key_cols[c].emplace_back(key_vec[c]);
         }
-        output_maxes.push_back(max_val);
+        output_maxes.emplace_back(max_val);
     }
 
     DataFrame result;
@@ -215,9 +209,9 @@ DataFrame GroupBy::count(const std::string& target_col_name) const {
 
     for (const auto& [key_vec, row_indices] : groups) {
         for (size_t c = 0; c < names.size(); ++c) {
-            output_key_cols[c].push_back(key_vec[c]);
+            output_key_cols[c].emplace_back(key_vec[c]);
         }
-        output_counts.push_back(static_cast<int64_t>(row_indices.size()));
+        output_counts.emplace_back(static_cast<int64_t>(row_indices.size()));
     }
 
     DataFrame result;
