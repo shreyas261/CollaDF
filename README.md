@@ -1,47 +1,136 @@
-# CollaDF 🚀 
+***
 
-**CollaDF (Columnar DataFrame)** is a lightweight, high-performance data manipulation and analysis toolkit written in Modern C++17. 
+# 🚀 CollaDF: High-Performance C++ Data Manipulation Toolkit
 
-Built from scratch with a focus on CPU cache-friendly **columnar memory layout**, it is designed to perform blazing-fast vectorized operations on numerical datasets. It bypasses the overhead of generic tools by focusing on core Machine Learning and Data Engineering workloads. Includes **Python bindings** via PyBind11 to seamlessly integrate into standard ML pipelines.
+![C++17](https://img.shields.io/badge/C++-17-blue.svg)
+![License](https://img.shields.io/badge/License-MIT-green.svg)
+![Build](https://img.shields.io/badge/Build-Passing-brightgreen.svg)
 
-## ✨ Features
-*   **Columnar Storage:** Data is stored in contiguous memory blocks (`std::vector`), maximizing CPU cache hits and enabling SIMD auto-vectorization.
-*   **Fast I/O:** Custom zero-copy CSV parser using memory buffering and `std::string_view`.
-*   **Vectorized Arithmetic:** Highly optimized column-to-column operations without row-by-row iteration overhead.
-*   **Hash-Based GroupBy:** Fast aggregations (`mean`, `sum`, `count`) utilizing `std::unordered_map`.
-*   **Python Integration:** Native Python bindings to use C++ speed with Python's ease of use (bypassing the GIL).
+**CollaDF** is a lightweight, fast, and heavily optimized Data Manipulation and Analysis toolkit written entirely in C++. It provides an intuitive API for filtering, grouping, and aggregating data, leveraging low-level C++ features like **Memory-Mapped I/O (`mmap`)**, **Type Erasure**, and **Contiguous Memory Allocation** to achieve extremely fast data pipeline execution.
 
-## 📂 Directory Structure
-This project follows modern C++ project architecture (Pitchfork Layout):
+This project was built to demonstrate proficiency in core C++ concepts, memory management, and data structure design, focusing on a subset of the most critical data operations required in Data Engineering and Machine Learning pipelines.
 
-```text
-CollaDF/
-│
-├── CMakeLists.txt          # Main CMake build configuration
-├── README.md               # Project documentation
-│
-├── include/                # Public header files (.hpp)
-│   └── colladf/
-│       ├── DataFrame.hpp   # Core DataFrame class
-│       ├── Column.hpp      # Template Column storage
-│       ├── CsvReader.hpp   # Fast CSV parsing logic
-│       └── GroupBy.hpp     # Aggregation logic
-│
-├── src/                    # C++ Source files (.cpp)
-│   ├── DataFrame.cpp
-│   ├── CsvReader.cpp
-│   └── GroupBy.cpp
-│
-├── bindings/               # PyBind11 Python wrappers
-│   └── python_bindings.cpp # Exposes C++ classes to Python
-│
-├── tests/                  # Unit tests (Google Test)
-│   ├── CMakeLists.txt
-│   ├── test_dataframe.cpp
-│   └── test_math.cpp
-│
-└── benchmarks/             # Performance testing scripts
-    ├── generate_data.py    # Script to create large dummy CSVs
-    ├── benchmark_pandas.py # Timing Pandas
-    └── benchmark_colladf.py# Timing CollaDF
+---
+
+## ⚡ Performance Benchmarks
+
+CollaDF was benchmarked against Python's `pandas` on three large CSV datasets (10 Million, 50 Million, and 100 Million rows). 
+
+**Key Takeaway:** CollaDF is **~2.3x faster at reading CSV files** due to custom Memory-Mapped I/O (`mmap`) and zero-copy string views, resulting in an overall faster pipeline execution time (33% faster total time on 100M rows).
+
+
+### Comparison Table
+
+| Dataset Size | Operation | CollaDF (C++) | Pandas (Python) | Speedup / Note |
+| :--- | :--- | :--- | :--- | :--- |
+| **10M Rows** | Read CSV | **1.62 s** | 2.91 s | CollaDF is ~1.8x faster |
+| | Filter (`>`) | 0.62 s | **0.27 s** | Pandas is ~2.3x faster |
+| | GroupBy Mean | **0.37 s** | 0.38 s | Equal performance |
+| | **Total Time** | **2.62 s** | 3.56 s | **CollaDF is ~36% faster overall** |
+| | | | | |
+| **50M Rows** | Read CSV | **7.48 s** | 14.12 s | CollaDF is ~1.9x faster |
+| | Filter (`>`) | 2.77 s | **1.32 s** | Pandas is ~2.1x faster |
+| | GroupBy Mean | 1.93 s | **1.73 s** | Pandas is ~1.1x faster |
+| | **Total Time** | **12.19 s** | 17.18 s | **CollaDF is ~41% faster overall** |
+| | | | | |
+| **100M Rows**| Read CSV | **14.86 s** | 35.05 s | CollaDF is ~2.3x faster |
+| | Filter (`>`) | 7.70 s | **2.67 s** | Pandas is ~2.8x faster |
+| | GroupBy Mean | 5.67 s | **4.54 s** | Pandas is ~1.2x faster |
+| | **Total Time** | **28.24 s** | 42.27 s | **CollaDF is ~50% faster overall** |
+
+*Note: The Python library relies on highly optimized C-extensions and SIMD instructions for filtering. However, CollaDF's massive I/O advantage makes the end-to-end data pipeline significantly faster.*
+
+---
+
+## 🛠️ System Architecture & Technical Highlights
+
+To achieve this performance and maintain a clean API, CollaDF utilizes several advanced C++ paradigms:
+
+*   **Memory-Mapped I/O (`sys/mman.h`)**: Bypasses standard `std::ifstream` overhead by mapping the CSV directly into the CPU's virtual address space, allowing zero-copy parsing via `std::string_view`.
+*   **Type Erasure & Polymorphism**: Uses a base `Series` class with a templated `Column<T>` implementation. This allows the `DataFrame` to store heterogenous columns (Int, Double, String) in a single `std::unordered_map<std::string, std::shared_ptr<Series>>`.
+*   **Variant & Compile-Time Type Checking**: Uses `std::variant<int64_t, double, std::string>` for scalar values and `if constexpr` for compile-time branch optimization during aggregations and math operations.
+*   **Custom Hashing (`VectorHash`)**: Implemented a bitwise-optimized hash function (using golden ratio bit-shifting) to allow `std::unordered_map` to group by multiple columns simultaneously.
+*   **Operator Overloading**: Overloaded operators (`+`, `-`, `>`, `==`, `&`, `|`) to provide an intuitive syntax for boolean masking and vector math.
+
+---
+
+## 💻 Quick Start & Usage
+
+### 1. Loading and Inspecting Data
+```cpp
+#include "colladf/Reader.hpp"
+#include "colladf/DataFrame.hpp"
+
+// Fast loading via Memory Mapping
+DataFrame df = Reader::read_csv("data.csv");
+
+// Inspect the dataset
+df.head(5).describe();
 ```
+
+### 2. Filtering (Boolean Masking)
+```cpp
+// Combine masks using overloaded & and | operators
+std::vector<bool> mask = (df["department"] == "Engineering") & (df["salary"] > 80000);
+
+// Apply mask to create a new subset DataFrame
+DataFrame rich_engineers = df[mask];
+```
+
+### 3. GroupBy & Aggregations
+```cpp
+#include "colladf/GroupBy.hpp"
+
+// Single column grouping
+DataFrame dept_avg = df.groupby("department").mean("salary");
+
+// Multi-column grouping
+DataFrame complex_group = df.groupby({"department", "name"}).max("rating");
+```
+
+### 4. Vectorized Arithmetic
+```cpp
+// Broadcast scalar addition
+DataFrame boosted_salary = df["salary"] + 5000;
+
+// Column-to-Column arithmetic
+DataFrame metric = df["salary"] / df["rating"];
+```
+
+---
+
+## 🏗️ Building and Testing
+
+The project uses standard C++17 and `gtest` for unit testing. 
+
+```bash
+# Clone the repository
+git clone https://github.com/yourusername/CollaDF.git
+cd CollaDF
+
+# Build the project (Assuming standard CMake setup)
+mkdir build && cd build
+cmake ..
+make
+
+# Run the unit tests
+./run_tests
+
+# Run the benchmark suite
+./benchmark_colladf
+```
+
+---
+### Console Outputs
+![CollaDF Benchmark](images/colladf.png)
+<br>
+![Pandas Benchmark](images/pandas.png)
+
+## 🔮 Future Enhancements (Roadmap)
+
+While the current MVP excels in I/O and provides core operations, future updates will focus on:
+1.  **SIMD Vectorization**: Utilizing AVX2/AVX-512 intrinsics to speed up the boolean filtering operations.
+2.  **Multithreading**: Implementing `std::async` or a Thread Pool for parallel CSV parsing and parallel group-by aggregations.
+3.  **Null Value Handling**: Introducing bitmasks to safely and efficiently handle missing data (`NaN`).
+
+---
