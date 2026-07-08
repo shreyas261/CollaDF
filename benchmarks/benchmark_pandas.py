@@ -29,7 +29,7 @@ def bechmrk(path):
     end_total = time.time()
     
     print("------------------------------------")
-    print("Total Pandas " + path + "Time: " + str(end_total - start_total) + "seconds")
+    print("Total Pandas " + path + " Time: " + str(end_total - start_total) + " seconds")
     print("------------------------------------\n\n")
 
 if __name__ == "__main__":
